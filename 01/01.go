@@ -19,6 +19,11 @@ func main() {
 	//coords and facing direction
 	x, y, f := 0, 0, int8(0)
 
+	mx, my, met := 0, 0, false
+	grid := map[string]bool{
+		"0x0": true,
+	}
+
 	content, err := ioutil.ReadFile("input.txt")
 	if err != nil {
 		panic(err)
@@ -32,18 +37,45 @@ func main() {
 			f = (f - 1) & 3
 		}
 
-		i, err := strconv.Atoi(instruction[2:])
+		steps, err := strconv.Atoi(instruction[2:])
 
 		if err != nil {
 			panic(err)
 		}
 
-		x = x + i*dir[f][0]
-		y = y + i*dir[f][1]
+		if !met {
+			for i := x + dir[f][0]; i != x+(steps+1)*dir[f][0]; i = i + dir[f][0] {
+				if grid[fmt.Sprintf("%dx%d", i, y)] {
+					mx = i
+					my = y
+					met = true
+					break
+				}
 
-		fmt.Printf("X: %d, Y: %d\n", x, y)
+				grid[fmt.Sprintf("%dx%d", i, y)] = true
+			}
+
+			for i := y + dir[f][1]; i != y+(steps+1)*dir[f][1]; i = i + dir[f][1] {
+				if grid[fmt.Sprintf("%dx%d", x, i)] {
+					my = i
+					mx = x
+					met = true
+					break
+				}
+
+				grid[fmt.Sprintf("%dx%d", x, i)] = true
+			}
+		}
+
+		x = x + steps*dir[f][0]
+		y = y + steps*dir[f][1]
 	}
 
+	fmt.Printf("Distance from start: %d\n", calculateDistance(x, y))
+	fmt.Printf("Distance from first meeting: %d\n", calculateDistance(mx, my))
+}
+
+func calculateDistance(x, y int) int {
 	if x < 0 {
 		x = -x
 	}
@@ -51,6 +83,5 @@ func main() {
 	if y < 0 {
 		y = -y
 	}
-
-	fmt.Println(x + y)
+	return x + y
 }
