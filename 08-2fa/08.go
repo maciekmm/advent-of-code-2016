@@ -41,10 +41,12 @@ func main() {
 			}
 		} else { //rotate
 			opts := strings.SplitN(str[strings.LastIndexByte(str, byte('='))+1:], " by ", 2)
+
 			id, err := strconv.Atoi(opts[0])
 			if err != nil {
 				panic(err)
 			}
+
 			pixels, err := strconv.Atoi(opts[1])
 			if err != nil {
 				panic(err)
@@ -71,6 +73,7 @@ func main() {
 		}
 	}
 	draw(display)
+
 	lit := 0
 	for i := 0; i < width; i++ {
 		for j := 0; j < height; j++ {
