@@ -8,10 +8,12 @@ import (
 	"strconv"
 )
 
+//reuse buffers
+var charCountBuf, multiBuf bytes.Buffer
+
 func calculateLength(str string) int {
 	totalLength := 0
 	indice, afterSplit := false, false
-	var charCountBuf, multiBuf bytes.Buffer
 
 	for i := 0; i < len(str); i++ {
 		switch str[i] {
@@ -26,13 +28,16 @@ func calculateLength(str string) int {
 			if err != nil {
 				panic(err)
 			}
-			totalLength = totalLength + calculateLength(str[i+1:i+charCount+1])*multiplier
 
-			i = i + charCount
+			//cleanup time
 			charCountBuf.Reset()
 			multiBuf.Reset()
 			indice = false
 			afterSplit = false
+
+			//recursively parse nested instructions
+			totalLength = totalLength + calculateLength(str[i+1:i+charCount+1])*multiplier
+			i = i + charCount
 		default:
 			if indice {
 				if str[i] == 'x' {
@@ -59,7 +64,6 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	length := 0
-
 	for scanner.Scan() {
 		length = length + calculateLength(scanner.Text())
 	}
