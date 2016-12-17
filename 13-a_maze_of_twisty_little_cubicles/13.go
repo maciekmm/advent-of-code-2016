@@ -33,18 +33,18 @@ func (p Point) IsOpen() bool {
 	return open
 }
 
-func (p Point) ShortestPath(dest Point) int {
+func (p Point) ShortestPath(dest Point, maxDistance int) (int, int) {
 	distance := 0
 	points := []Point{p}
 	visited := map[Point]struct{}{}
 
-	for {
+	for maxDistance == 0 || distance < maxDistance {
 		distance++
 		nextPoints := []Point{}
 		for _, current := range points {
 			for _, adj := range current.GetAdjacent() {
 				if adj == dest {
-					return distance
+					return distance, len(visited)
 				}
 				if _, ok := visited[adj]; !ok {
 					visited[adj] = struct{}{}
@@ -54,10 +54,14 @@ func (p Point) ShortestPath(dest Point) int {
 		}
 		points = nextPoints
 	}
+	return distance, len(visited)
 }
 
 const input = 1352
 
 func main() {
-	fmt.Println(Point{1, 1}.ShortestPath(Point{31, 39}))
+	d, _ := Point{1, 1}.ShortestPath(Point{31, 39}, 0)
+	fmt.Println("Distance:", d)
+	_, vis := Point{1, 1}.ShortestPath(Point{31, 39}, 50)
+	fmt.Println("Points visited:", vis)
 }
