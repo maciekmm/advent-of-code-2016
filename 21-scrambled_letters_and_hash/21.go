@@ -9,23 +9,23 @@ import (
 	"strings"
 )
 
-type Scramble []byte
+type Scrambler []byte
 
-func (s Scramble) SwapPositions(x, y int) {
+func (s Scrambler) SwapPositions(x, y int) {
 	s[x], s[y] = s[y], s[x]
 }
 
-func (s Scramble) SwapLetters(x, y byte) {
+func (s Scrambler) SwapLetters(x, y byte) {
 	s.SwapPositions(bytes.IndexByte(s, x), bytes.IndexByte(s, y))
 }
 
-func (s Scramble) Reverse(x, y int) {
+func (s Scrambler) Reverse(x, y int) {
 	for i := 0; i <= (y-x)/2; i++ {
 		s.SwapPositions(x+i, y-i)
 	}
 }
 
-func (s Scramble) Move(x, y int) {
+func (s Scrambler) Move(x, y int) {
 	b := s[x]
 	s = append(s[:x], s[x+1:]...)
 
@@ -37,7 +37,7 @@ func (s Scramble) Move(x, y int) {
 	copy(s, temp)
 }
 
-func (s Scramble) Rotate(right bool, steps int) {
+func (s Scrambler) Rotate(right bool, steps int) {
 	//overflow precautions
 	steps = steps % len(s)
 
@@ -51,7 +51,7 @@ func (s Scramble) Rotate(right bool, steps int) {
 	copy(s, temp)
 }
 
-func (s Scramble) RotateByLetter(x byte) {
+func (s Scrambler) RotateByLetter(x byte) {
 	rotations := bytes.IndexByte(s, x)
 	if rotations >= 4 {
 		rotations++
@@ -60,16 +60,9 @@ func (s Scramble) RotateByLetter(x byte) {
 	s.Rotate(true, rotations)
 }
 
-func main() {
-	g := Scramble([]byte("abcdefgh"))
-	file, err := os.Open("input.txt")
-	if err != nil {
-		panic(err)
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		instr := strings.Split(scanner.Text(), " ")
+func Scramble(instructions [][]string, input string) string {
+	g := Scrambler([]byte(input))
+	for _, instr := range instructions {
 		switch instr[0] {
 		case "swap":
 			if instr[1] == "position" {
@@ -100,6 +93,46 @@ func main() {
 			}
 		}
 	}
+	return string(g)
+}
 
-	fmt.Println(string(g))
+func main() {
+	file, err := os.Open("input.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	instructions := [][]string{}
+	for scanner.Scan() {
+		instructions = append(instructions, strings.Split(scanner.Text(), " "))
+	}
+	fmt.Println("Part 1:", Scramble(instructions, "abcdefgh"))
+
+	orig := []byte("fbgdceah")
+	for p := make([]byte, len(orig)); int(p[0]) < len(p); nextPerm(p) {
+		perm := string(getPerm(orig, p))
+		if Scramble(instructions, perm) == "fbgdceah" {
+			fmt.Println("Part 2:", perm)
+		}
+	}
+}
+
+//http://stackoverflow.com/questions/30226438/generate-all-permutations-in-go
+func nextPerm(p []byte) {
+	for i := len(p) - 1; i >= 0; i-- {
+		if i == 0 || int(p[i]) < len(p)-i-1 {
+			p[i]++
+			return
+		}
+		p[i] = 0
+	}
+}
+
+func getPerm(orig, p []byte) []byte {
+	result := append([]byte{}, orig...)
+	for i, v := range p {
+		result[i], result[i+int(v)] = result[i+int(v)], result[i]
+	}
+	return result
 }
