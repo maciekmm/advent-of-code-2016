@@ -27,15 +27,6 @@ func (s State) Moves() []State {
 		if s[i] != currentFloor {
 			continue
 		}
-		if currentFloor < floors-1 {
-			cloned := s.Clone()
-			cloned[0]++ //elevator
-			cloned[i]++ //item
-			if cloned.IsValid() {
-				moves = append(moves, cloned)
-			}
-			moves = append(moves, cloned)
-		}
 
 		if currentFloor > 0 {
 			//down
@@ -47,6 +38,7 @@ func (s State) Moves() []State {
 			}
 		}
 
+		movedTwo := false
 		//two somewhere
 		for j := i + 1; j < elements; j++ {
 			if s[j] != currentFloor {
@@ -61,6 +53,7 @@ func (s State) Moves() []State {
 				cloned[j]++
 				if cloned.IsValid() {
 					moves = append(moves, cloned)
+					movedTwo = true
 				}
 			}
 
@@ -74,6 +67,17 @@ func (s State) Moves() []State {
 			// 		moves = append(moves, cloned)
 			// 	}
 			// }
+		}
+
+		//move up
+		//if two are being moved up, don't move one
+		if !movedTwo && currentFloor < floors-1 {
+			cloned := s.Clone()
+			cloned[0]++ //elevator
+			cloned[i]++ //item
+			if cloned.IsValid() {
+				moves = append(moves, cloned)
+			}
 		}
 	}
 	return moves
