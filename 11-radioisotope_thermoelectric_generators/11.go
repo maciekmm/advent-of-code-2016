@@ -1,103 +1,142 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 const pairs = 7
 const floors = 4
-const elements = pairs*2 + 1
+
+type Pairs [pairs][2]uint8
 
 //elevator
 //gen:mic floor
 //gen1:mic2 floor...
-type State [elements]uint8
-
-func (s State) Clone() (new State) {
-	for i, e := range s {
-		new[i] = e
-	}
-	return
+type State struct {
+	Elevator uint8
+	Substate Pairs
 }
 
-func (s State) Moves() []State {
-	moves := []State{}
-	currentFloor := s[0]
+// Len is part of sort.Interface.
+func (s *State) Len() int {
+	return len(s.Substate)
+}
+
+// Swap is part of sort.Interface.
+func (s *State) Swap(i, j int) {
+	s.Substate[i], s.Substate[j] = s.Substate[j], s.Substate[i]
+}
+
+// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
+func (s *State) Less(i, j int) bool {
+	if s.Substate[i][0] == s.Substate[j][0] {
+		return s.Substate[i][1] > s.Substate[j][1]
+	}
+	return s.Substate[i][0] > s.Substate[j][0]
+}
+
+func (s *State) Simplify() {
+	sort.Sort(s)
+}
+
+func (s *State) Clone() *State {
+	new := &State{Elevator: s.Elevator}
+	for i, pair := range s.Substate {
+		for j, floor := range pair {
+			new.Substate[i][j] = floor
+		}
+	}
+	return new
+}
+
+func (s *State) Moves() []*State {
+	moves := []*State{}
+	currentFloor := s.Elevator
 	//1 somewhere
-	for i := 1; i < elements; i++ {
-		//item x
-		if s[i] != currentFloor {
-			continue
-		}
-
-		if currentFloor > 0 {
-			//down
-			cloned := s.Clone()
-			cloned[0]--
-			cloned[i]--
-			if cloned.IsValid() {
-				moves = append(moves, cloned)
-			}
-		}
-
-		movedTwo := false
-		//two somewhere
-		for j := i + 1; j < elements; j++ {
-			if s[j] != currentFloor {
+	for i, pair := range s.Substate {
+		for j := 0; j < 2; j++ {
+			if pair[j] != currentFloor {
 				continue
 			}
 
-			//up
-			if currentFloor < floors-1 {
+			if currentFloor > 0 {
+				//down
 				cloned := s.Clone()
-				cloned[0]++
-				cloned[i]++
-				cloned[j]++
+				cloned.Elevator--
+				cloned.Substate[i][j]--
 				if cloned.IsValid() {
 					moves = append(moves, cloned)
-					movedTwo = true
 				}
 			}
 
-			//why would we move two items down, no idea
-			// if currentFloor > 0 {
-			// 	cloned := s.Clone()
-			// 	cloned[0]--
-			// 	cloned[i]--
-			// 	cloned[j]--
-			// 	if cloned.IsValid() {
-			// 		moves = append(moves, cloned)
-			// 	}
-			// }
-		}
+			movedTwo := false
+			//two somewhere
+			l := j + 1
+			for k := i; k < len(s.Substate); k++ {
+				for ; l < 2; l++ {
+					if s.Substate[k][l] != currentFloor {
+						continue
+					}
 
-		//move up
-		//if two are being moved up, don't move one
-		if !movedTwo && currentFloor < floors-1 {
-			cloned := s.Clone()
-			cloned[0]++ //elevator
-			cloned[i]++ //item
-			if cloned.IsValid() {
-				moves = append(moves, cloned)
+					//up
+					if currentFloor < floors-1 {
+						cloned := s.Clone()
+						cloned.Elevator++
+						cloned.Substate[i][j]++
+						cloned.Substate[k][l]++
+						if cloned.IsValid() {
+							moves = append(moves, cloned)
+							movedTwo = true
+						}
+					}
+
+					//why would we move two items down, no idea
+					// if currentFloor > 0 {
+					// 	cloned := s.Clone()
+					// 	cloned[0]--
+					// 	cloned[i]--
+					// 	cloned[j]--
+					// 	if cloned.IsValid() {
+					// 		moves = append(moves, cloned)
+					// 	}
+					// }
+				}
+				l = 0
+			}
+
+			//move up
+			//if two are being moved up, don't move one
+			if !movedTwo && currentFloor < floors-1 {
+				cloned := s.Clone()
+				cloned.Elevator++       //elevator
+				cloned.Substate[i][j]++ //item
+				if cloned.IsValid() {
+					moves = append(moves, cloned)
+				}
 			}
 		}
+		//item x
+
 	}
 	return moves
 }
 
-func (s State) IsValid() bool {
+func (s *State) IsValid() bool {
 	for i := uint8(0); i < floors; i++ {
 		hasGen, hasUnpairedChip := false, false
-		for j := 0; j < pairs; j++ {
-			if s[1+j*2] != i && s[2+j*2] != i {
+		for _, pair := range s.Substate {
+			if pair[0] != i && pair[1] != i {
 				continue
 			}
 
-			if s[1+j*2] == i {
+			if pair[0] == i {
 				if hasUnpairedChip {
 					return false
 				}
 				hasGen = true
 			}
-			if s[1+j*2] != i && s[2+j*2] == i {
+			if pair[0] != i && pair[1] == i {
 				if hasGen {
 					return false
 				}
@@ -111,35 +150,42 @@ func (s State) IsValid() bool {
 	return true
 }
 
-func (s State) IsFinished() bool {
+func (s *State) IsFinished() bool {
 	//return s == finished
-	for i := 0; i < elements; i++ {
-		if s[i] != floors-1 {
-			return false
+	for _, sub := range s.Substate {
+		for _, p := range sub {
+			if p != floors-1 {
+				return false
+			}
 		}
 	}
 	return true
 }
 
 func main() {
-	initialState := State{0, 0, 0, 0, 1, 0, 1, 2, 2, 2, 2, 0, 0, 0, 0}
-	visited := map[State]struct{}{initialState: struct{}{}}
-	toExplore := []State{initialState}
+	initialState := &State{Elevator: 0, Substate: Pairs{[2]uint8{0, 0}, [2]uint8{0, 1}, [2]uint8{0, 1}, [2]uint8{2, 2}, [2]uint8{2, 2}, [2]uint8{0, 0}, [2]uint8{0, 0}}}
+	visited := map[State]struct{}{*initialState: struct{}{}}
+	toExplore := []*State{initialState}
 
 	distance := 0
 
 	for {
 		distance++
-		nextPoints := []State{}
+		//fmt.Println(distance, len(toExplore))
+		nextPoints := []*State{}
 		for _, current := range toExplore {
-
 			for _, adj := range current.Moves() {
 				if adj.IsFinished() {
 					fmt.Println(distance)
 					return
 				}
-				if _, ok := visited[adj]; !ok {
-					visited[adj] = struct{}{}
+				if _, ok := visited[*adj]; !ok {
+					adj.Simplify()
+				} else {
+					continue
+				}
+				if _, ok := visited[*adj]; !ok {
+					visited[*adj] = struct{}{}
 					nextPoints = append(nextPoints, adj)
 				}
 			}
